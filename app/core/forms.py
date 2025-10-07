@@ -1,11 +1,13 @@
-from typing import Optional, List
+from typing import List, Optional
+
 from fastapi import Form
+
 
 class OAuth2PasswordRequestFormCompat:
     def __init__(
         self,
-        username: Optional[str] = Form(None),          
-        email: Optional[str] = Form(None),             
+        username: Optional[str] = Form(None),
+        email: Optional[str] = Form(None),
         password: str = Form(...),
         scope: str = Form(""),
         client_id: Optional[str] = Form(None),

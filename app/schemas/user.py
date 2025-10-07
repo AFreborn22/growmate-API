@@ -1,5 +1,7 @@
-from pydantic import BaseModel, EmailStr
 from typing import Optional
+
+from pydantic import BaseModel, EmailStr
+
 
 class UserCreate(BaseModel):
     nik: str
@@ -8,21 +10,27 @@ class UserCreate(BaseModel):
     tempat_lahir: str
     tanggal_lahir: str
     alamat: str
-    email: EmailStr  
+    email: EmailStr
     berat_badan: float
     tinggi_badan: float
     lingkar_tangan: float
-    password: str  
+    password: str
 
     class Config:
         orm_mode = True
+
+
+class UserCreateResponse(BaseModel):
+    user_data: UserCreate
+    message: str
 
 
 class UserInDB(UserCreate):
-    id: int  
+    id: int
 
     class Config:
         orm_mode = True
+
 
 class UserLogin(BaseModel):
     email: str
@@ -31,13 +39,14 @@ class UserLogin(BaseModel):
     class Config:
         orm_mode = True
 
+
 class UserUpdate(BaseModel):
     nama: Optional[str] = None
     usia: Optional[int] = None
     tempat_lahir: Optional[str] = None
     tanggal_lahir: Optional[str] = None
     alamat: Optional[str] = None
-    email: Optional[EmailStr] = None  
+    email: Optional[EmailStr] = None
     berat_badan: Optional[float] = None
     tinggi_badan: Optional[float] = None
     lingkar_tangan: Optional[float] = None

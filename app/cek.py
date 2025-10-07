@@ -1,4 +1,7 @@
-import bcrypt, inspect
+import inspect
+
+import bcrypt
+
 print("bcrypt module:", bcrypt)
 print("__file__:", getattr(bcrypt, "__file__", None))
 try:

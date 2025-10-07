@@ -1,28 +1,34 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from app.schemas.user import UserCreate, UserUpdate, UserLogin, Token
+from sqlalchemy.orm import Session
+
+from app.core.forms import OAuth2PasswordRequestFormCompat
+from app.core.security import (createAccessToken, getCurrentUser, hashPassword,
+                               verifyPassword)
 from app.db.session import getDB
 from app.models.user import User
-from app.core.security import createAccessToken, verifyPassword, hashPassword, getCurrentUser
-from app.core.forms import OAuth2PasswordRequestFormCompat
+from app.schemas.user import Token, UserCreate, UserCreateResponse, UserLogin, UserUpdate
 
 router = APIRouter()
 
+
 # Endpoint untuk sign-up
-@router.post("/signup", response_model=Token)
+@router.post("/signup", response_model=UserCreateResponse)
 def signup(user: UserCreate, db: Session = Depends(getDB)):
     try:
         # Cek apakah NIK atau email sudah ada di database
         existing_user_nik = db.query(User).filter(User.nik == user.nik).first()
-        existing_user_email = db.query(User).filter(User.email == user.email).first()
+        existing_user_email = db.query(User).filter(
+            User.email == user.email).first()
 
         if existing_user_nik:
-            raise HTTPException(status_code=400, detail="NIK already registered")
-        
+            raise HTTPException(
+                status_code=400, detail="NIK already registered")
+
         if existing_user_email:
-            raise HTTPException(status_code=400, detail="Email already registered")
-        
+            raise HTTPException(
+                status_code=400, detail="Email already registered")
+
         # Membuat data user untuk disimpan ke database
         user_data = {
             "nik": user.nik,
@@ -35,9 +41,10 @@ def signup(user: UserCreate, db: Session = Depends(getDB)):
             "berat_badan": user.berat_badan,
             "tinggi_badan": user.tinggi_badan,
             "lingkar_tangan": user.lingkar_tangan,
-            "password": hashPassword(user.password)  # Meng-hash password sebelum disimpan
+            # Meng-hash password sebelum disimpan
+            "password": hashPassword(user.password)
         }
-        
+
         # Menyimpan user ke database
         db_user = User(**user_data)
         db.add(db_user)
@@ -59,7 +66,8 @@ def signup(user: UserCreate, db: Session = Depends(getDB)):
     except Exception as e:
         # Menangani kesalahan umum lainnya
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"An error occurred while processing your request: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"An error occurred while processing your request: {str(e)}")  # noqa
+
 
 # Endpoint untuk login
 @router.post("/login", response_model=Token)
@@ -68,18 +76,21 @@ def login(form: OAuth2PasswordRequestFormCompat = Depends(), db: Session = Depen
     if not db_user or not verifyPassword(form.password, db_user.password):
         raise HTTPException(status_code=400, detail="Incorrect credentials")
 
-    access_token = createAccessToken(data={"sub": db_user.nik, "email": db_user.email})
+    access_token = createAccessToken(
+        data={"sub": db_user.nik, "email": db_user.email}
+    )
     return {"access_token": access_token, "token_type": "bearer"}
+
 
 # Endpoint untuk update user
 @router.put("/update")
-def update_user(user: UserUpdate, db: Session = Depends(getDB), currentUser = Depends(getCurrentUser)):
+def update_user(user: UserUpdate, db: Session = Depends(getDB), currentUser=Depends(getCurrentUser)):
     try:
         # Cari user berdasarkan NIK yang terautentikasi
         dbUser = db.query(User).filter(User.nik == currentUser.nik).first()
         if not dbUser:
             raise HTTPException(status_code=404, detail="User not found")
-        
+
         # Update data sesuai dengan yang dikirimkan dalam request
         if user.nama:
             dbUser.nama = user.nama
@@ -105,4 +116,4 @@ def update_user(user: UserUpdate, db: Session = Depends(getDB), currentUser = De
         return {"message": "Update data successfully"}
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"An error occurred while updating the user: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"An error occurred while updating the user: {str(e)}")  # noqa
