@@ -2,13 +2,11 @@ from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from app.core.config import settings
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.models.user import User
 from app.db.session import getDB
-from app.core.config import settings
-
 
 # Pengaturan hashing password
 pwdContext = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -43,22 +41,19 @@ def verifyToken(token: str):
     except JWTError:
         raise HTTPException(status_code=401, detail="Could not validate credentials")
     
-oauth2Scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+httpBearer = HTTPBearer(auto_error=True)
 
-def getCurrentUser(token: str = Depends(oauth2Scheme), db: Session = Depends(getDB)) -> User:
+def getCurrentUser(creds: HTTPAuthorizationCredentials = Depends(httpBearer), db: Session = Depends(getDB)) -> User:
     try:
-        payload = verifyToken(token)  
-        if payload is None:
-            raise HTTPException(status_code=401, detail="Could not validate credentials")
-        
-        nik: str = payload.get("sub")
-        if nik is None:
+        token = creds.credentials
+        payload = verifyToken(token)
+        nik: str = payload.get("sub") 
+        if not nik:
             raise HTTPException(status_code=401, detail="Could not validate credentials")
         
         db_user = db.query(User).filter(User.nik == nik).first()
         if db_user is None:
             raise HTTPException(status_code=404, detail="User not found")
-        
         return db_user
     except JWTError:
         raise HTTPException(status_code=401, detail="Could not validate credentials")
