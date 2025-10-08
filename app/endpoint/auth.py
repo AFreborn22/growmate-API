@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -7,14 +8,13 @@ from app.core.security import (createAccessToken, getCurrentUser, hashPassword,
                                verifyPassword)
 from app.db.session import getDB
 from app.models.user import User
-from app.schemas.user import (Token, UserCreate, UserCreateResponse, UserLogin,
-                              UserUpdate)
+from app.core.security import createAccessToken, verifyPassword, hashPassword, getCurrentUser
 
 router = APIRouter()
 
 
 # Endpoint untuk sign-up
-@router.post("/signup", response_model=UserCreateResponse)
+@router.post("/signup")
 def signup(user: UserCreate, db: Session = Depends(getDB)):
     try:
         # Cek apakah NIK atau email sudah ada di database
@@ -61,25 +61,21 @@ def signup(user: UserCreate, db: Session = Depends(getDB)):
         return responseData
 
     except IntegrityError:
-        # Menangani error integritas (misalnya NIK atau email yang sudah ada)
         db.rollback()
         raise HTTPException(status_code=400, detail="Data integrity error")
     except Exception as e:
-        # Menangani kesalahan umum lainnya
         db.rollback()
         raise HTTPException(status_code=500, detail=f"An error occurred while processing your request: {str(e)}")  # noqa
 
 
 # Endpoint untuk login
 @router.post("/login", response_model=Token)
-def login(form: OAuth2PasswordRequestFormCompat = Depends(), db: Session = Depends(getDB)):
-    db_user = db.query(User).filter(User.email == form.email).first()
-    if not db_user or not verifyPassword(form.password, db_user.password):
+def login(user: UserLogin, db: Session = Depends(getDB)):
+    dbUser = db.query(User).filter(User.email == user.email).first()
+    if not dbUser or not verifyPassword(user.password, dbUser.password):
         raise HTTPException(status_code=400, detail="Incorrect credentials")
 
-    access_token = createAccessToken(
-        data={"sub": db_user.nik, "email": db_user.email}
-    )
+    access_token = createAccessToken(data={"sub": dbUser.nik, "email": dbUser.email})
     return {"access_token": access_token, "token_type": "bearer"}
 
 
@@ -91,8 +87,7 @@ def update_user(user: UserUpdate, db: Session = Depends(getDB), currentUser=Depe
         dbUser = db.query(User).filter(User.nik == currentUser.nik).first()
         if not dbUser:
             raise HTTPException(status_code=404, detail="User not found")
-
-        # Update data sesuai dengan yang dikirimkan dalam request
+        
         if user.nama:
             dbUser.nama = user.nama
         if user.usia:
@@ -114,7 +109,8 @@ def update_user(user: UserUpdate, db: Session = Depends(getDB), currentUser=Depe
         db.commit()
         db.refresh(dbUser)
 
-        return {"message": "Update data successfully"}
+        return {"user": user,
+                "message": "Update data successfully"}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred while updating the user: {str(e)}")  # noqa
