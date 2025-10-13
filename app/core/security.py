@@ -57,3 +57,6 @@ def getCurrentUser(creds: HTTPAuthorizationCredentials = Depends(httpBearer), db
         return db_user
     except JWTError:
         raise HTTPException(status_code=401, detail="Could not validate credentials")
+    
+def getRawToken(creds: HTTPAuthorizationCredentials = Depends(httpBearer)) -> str:
+    return creds.credentials

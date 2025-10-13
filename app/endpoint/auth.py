@@ -34,7 +34,7 @@ def signup(user: UserCreate, db: Session = Depends(getDB)):
             "berat_badan": user.berat_badan,
             "tinggi_badan": user.tinggi_badan,
             "lingkar_tangan": user.lingkar_tangan,
-            "password": hashPassword(user.password)  # Meng-hash password sebelum disimpan
+            "password": hashPassword(user.password)  
         }
         
         # Menyimpan user ke database
@@ -72,10 +72,10 @@ def login(user: UserLogin, db: Session = Depends(getDB)):
 @router.put("/update")
 def update_user(user: UserUpdate, db: Session = Depends(getDB), currentUser = Depends(getCurrentUser)):
     try:
-        # Cari user berdasarkan NIK yang terautentikasi
+
         dbUser = db.query(User).filter(User.nik == currentUser.nik).first()
         if not dbUser:
-            raise HTTPException(status_code=404, detail="User not found")
+            raise HTTPException(status_code=404, detail="Invalid Credentials")
         
         if user.nama:
             dbUser.nama = user.nama
