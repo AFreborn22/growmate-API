@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from app.schemas.user import UserCreate, UserUpdate, UserLogin, Token
+from app.schemas.user import UserCreate, UserUpdate, UserLogin, UserData, Token
 from app.db.session import getDB
 from app.models.user import User
 from app.core.security import createAccessToken, verifyPassword, hashPassword, getCurrentUser
+from app.helper.ageCount import ageCount
 
 router = APIRouter()
 
@@ -22,13 +23,15 @@ def signup(user: UserCreate, db: Session = Depends(getDB)):
         if existing_user_email:
             raise HTTPException(status_code=400, detail="Email already registered")
         
+        usia = ageCount(user.tanggal_lahir)
+        
         # Membuat data user untuk disimpan ke database
         user_data = {
             "nik": user.nik,
             "nama": user.nama,
-            "usia": user.usia,
             "tempat_lahir": user.tempat_lahir,
             "tanggal_lahir": user.tanggal_lahir,
+            "usia": usia,
             "alamat": user.alamat,
             "email": user.email,
             "berat_badan": user.berat_badan,
@@ -36,6 +39,7 @@ def signup(user: UserCreate, db: Session = Depends(getDB)):
             "lingkar_tangan": user.lingkar_tangan,
             "password": hashPassword(user.password)  
         }
+
         
         # Menyimpan user ke database
         db_user = User(**user_data)
@@ -68,6 +72,19 @@ def login(user: UserLogin, db: Session = Depends(getDB)):
     access_token = createAccessToken(data={"sub": dbUser.nik, "email": dbUser.email})
     return {"access_token": access_token, "token_type": "bearer"}
 
+@router.get("/data")
+def getData(db: Session = Depends(getDB), currentUser = Depends(getCurrentUser)):
+    try :
+        dbUser = db.query(User).filter(User.nik == currentUser.nik).first()
+        if not dbUser:
+            raise HTTPException(status_code=404, detail="Invalid Credentials")
+        
+        
+        return dbUser 
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An error occurred while updating the user: {str(e)}")
+
+
 # Endpoint untuk update user
 @router.put("/update")
 def update_user(user: UserUpdate, db: Session = Depends(getDB), currentUser = Depends(getCurrentUser)):
@@ -77,14 +94,14 @@ def update_user(user: UserUpdate, db: Session = Depends(getDB), currentUser = De
         if not dbUser:
             raise HTTPException(status_code=404, detail="Invalid Credentials")
         
+
         if user.nama:
             dbUser.nama = user.nama
-        if user.usia:
-            dbUser.usia = user.usia
         if user.tempat_lahir:
             dbUser.tempat_lahir = user.tempat_lahir
         if user.tanggal_lahir:
             dbUser.tanggal_lahir = user.tanggal_lahir
+            dbUser.usia = ageCount(dbUser.tanggal_lahir)
         if user.alamat:
             dbUser.alamat = user.alamat
         if user.berat_badan:

@@ -1,12 +1,12 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional
+from datetime import date
 
 class UserCreate(BaseModel):
     nik: str
     nama: str
-    usia: int
     tempat_lahir: str
-    tanggal_lahir: str
+    tanggal_lahir: date
     alamat: str
     email: EmailStr  
     berat_badan: float
@@ -30,12 +30,26 @@ class UserLogin(BaseModel):
 
     class Config:
         orm_mode = True
+        
+class UserData(BaseModel):
+    nik: str
+    nama: str
+    tempat_lahir: str
+    tanggal_lahir: date
+    usia:int
+    alamat: str
+    email: EmailStr  
+    berat_badan: float
+    tinggi_badan: float
+    lingkar_tangan: float
+
+    class Config:
+        orm_mode = True
 
 class UserUpdate(BaseModel):
     nama: Optional[str] = None
-    usia: Optional[int] = None
     tempat_lahir: Optional[str] = None
-    tanggal_lahir: Optional[str] = None
+    tanggal_lahir: Optional[date] = None
     alamat: Optional[str] = None
     email: Optional[EmailStr] = None  
     berat_badan: Optional[float] = None

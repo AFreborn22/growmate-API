@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float
+from sqlalchemy import Column, Integer, String, Float, Date
 from sqlalchemy.orm import relationship
 from .base import Base
 
@@ -8,7 +8,7 @@ class User(Base):
     nik = Column(String, primary_key=True, index=True)
     nama = Column(String, unique=True, index=True)
     usia = Column(Integer)
-    tempat_lahir = Column(String)
+    tempat_lahir = Column(Date)
     tanggal_lahir = Column(String)
     alamat = Column(String)
     email = Column(String)
