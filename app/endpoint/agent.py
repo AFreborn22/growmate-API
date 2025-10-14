@@ -14,7 +14,6 @@ load_dotenv()
 
 async def getAgent(query: str, nik: str, token: str):
     url = os.getenv("AGENT", "http://127.0.0.1:8000/api/chat")
-    print(url)
 
     if not url :
         raise ValueError("tidak di temukan di env variable")

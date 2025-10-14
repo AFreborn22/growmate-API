@@ -1,13 +1,11 @@
 from sqlalchemy import Column, Integer, String, Float
-from sqlalchemy.ext.declarative import declarative_base
-
-Base = declarative_base()
+from sqlalchemy.orm import relationship
+from .base import Base
 
 class User(Base):
     __tablename__ = "users"
     
-    id = Column(Integer, primary_key=True, index=True)
-    nik = Column(String, unique=True, index=True)
+    nik = Column(String, primary_key=True, index=True)
     nama = Column(String, unique=True, index=True)
     usia = Column(Integer)
     tempat_lahir = Column(String)
@@ -18,3 +16,5 @@ class User(Base):
     tinggi_badan = Column(Float)
     lingkar_tangan = Column(Float)
     password = Column(String)
+
+gizi = relationship("Gizi", back_populates="user", uselist=False)
