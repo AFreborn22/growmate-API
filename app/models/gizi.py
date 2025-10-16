@@ -9,7 +9,6 @@ class Gizi(Base):
     nik = Column(String, ForeignKey("users.nik"), index=True)
     bmi = Column(Float)
     status_bmi = Column(String)
-    kalori_harian = Column(Integer)
+    kalori_harian = Column(Float)
 
 user = relationship("User", back_populates="gizi")
-

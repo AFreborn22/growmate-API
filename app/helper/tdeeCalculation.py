@@ -74,6 +74,7 @@ def updateGizi(nik: str, berat_badan: float, tinggi_badan: float, usia: int, pal
     
     # Hitung BMI
     bmi = bmiCount(berat_badan, tinggi_badan)
+    bmi = round(bmi, 2)
     
     # Tentukan status BMI
     if bmi < 18.5:
@@ -89,6 +90,7 @@ def updateGizi(nik: str, berat_badan: float, tinggi_badan: float, usia: int, pal
     try :
         
         kalori_harian = kaloriHarian(berat_badan, tinggi_badan, usia, pal, periode_kehamilan, mode="AKG")  
+        kalori_harian = round(kalori_harian, 2)
         print(kalori_harian)
 
     except Exception as e:
