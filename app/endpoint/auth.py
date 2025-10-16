@@ -1,21 +1,23 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from app.schemas.user import UserCreate, UserUpdate, UserLogin, UserData, UserUpdateResponse, Token, HTTPError
+from app.schemas.user import UserSignUp, UserSignUpResponse, UserLogin, Token, UserData, UserUpdate, UserUpdateResponse
 from app.resExample.auth import signup, login, getData, updateData
 from app.db.session import getDB
 from app.models.user import User
 from app.core.security import createAccessToken, verifyPassword, hashPassword, getCurrentUser
 from app.helper.ageCount import ageCount
 from app.helper.pregnantCount import trisemesterCount
+from app.helper.tdeeCalculation import updateGizi
 
 router = APIRouter()
 
 # Endpoint untuk sign-up
-@router.post("/signup", response_model=UserCreate, responses=signup)
-def signup(user: UserCreate, db: Session = Depends(getDB)):
+@router.post("/signup", response_model=UserSignUpResponse, responses=signup)
+def signup(user: UserSignUp, db: Session = Depends(getDB)):
     try:
-        # Cek apakah NIK atau email sudah ada di database
+
+        # Cek apakah NIK atau email sudah ada di DB
         existing_user_nik = db.query(User).filter(User.nik == user.nik).first()
         existing_user_email = db.query(User).filter(User.email == user.email).first()
 
@@ -28,8 +30,8 @@ def signup(user: UserCreate, db: Session = Depends(getDB)):
         usia = ageCount(user.tanggal_lahir)
         periode_kehamilan = trisemesterCount(user.tanggal_kehamilan_pertama)
         
-        # Membuat data user untuk disimpan ke database
-        user_data = {
+        # data user untuk disimpan ke database
+        userData = {
             "nik": user.nik,
             "nama": user.nama,
             "tempat_lahir": user.tempat_lahir,
@@ -46,16 +48,24 @@ def signup(user: UserCreate, db: Session = Depends(getDB)):
             "password": hashPassword(user.password)  
         }
 
-        print(user_data)
-
-        db_user = User(**user_data)
-        db.add(db_user)
+        dbUser = User(**userData)
+        db.add(dbUser)
         db.commit()
-        db.refresh(db_user)
+        db.refresh(dbUser)
+
+        gizi = updateGizi(nik=userData["nik"], 
+            berat_badan=userData["berat_badan"], 
+            tinggi_badan=userData["tinggi_badan"], 
+            usia=userData["usia"], 
+            pal=userData["pal"], 
+            periode_kehamilan=userData["periode_kehamilan"], 
+            db=db)
+        
+        print(gizi)
 
         responseData = {
-            "user_data": user_data,
-            "message": "User successfully registered"
+            "message": "User successfully registered",
+            "data": userData
         }
 
         return responseData
@@ -70,6 +80,8 @@ def signup(user: UserCreate, db: Session = Depends(getDB)):
 # Endpoint untuk login
 @router.post("/login", response_model=Token, responses=login)
 def login(user: UserLogin, db: Session = Depends(getDB)):
+
+    # cari user di DB by email & pw
     dbUser = db.query(User).filter(User.email == user.email).first()
     if not dbUser or not verifyPassword(user.password, dbUser.password):
         raise HTTPException(status_code=400, detail="Incorrect Email or Password")
@@ -83,7 +95,7 @@ def getData(db: Session = Depends(getDB), currentUser = Depends(getCurrentUser))
         dbUser = db.query(User).filter(User.nik == currentUser.nik).first()
         if not dbUser:
             raise HTTPException(status_code=404, detail="Invalid Credentials")
-        
+
         return dbUser 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred while updating the user: {str(e)}")
@@ -93,7 +105,7 @@ def getData(db: Session = Depends(getDB), currentUser = Depends(getCurrentUser))
 @router.put("/update", response_model=UserUpdateResponse, responses=updateData)
 def update_user(user: UserUpdate, db: Session = Depends(getDB), currentUser = Depends(getCurrentUser)):
     try:
-        # Find user in database
+        # cari user di DB by NIK
         dbUser = db.query(User).filter(User.nik == currentUser.nik).first()
         if not dbUser:
             raise HTTPException(status_code=404, detail="User not found")
@@ -101,7 +113,6 @@ def update_user(user: UserUpdate, db: Session = Depends(getDB), currentUser = De
         updated = False
         updatedField = {}
 
-        # Check and update user fields only if changed
         if user.nama and user.nama != dbUser.nama:
             dbUser.nama = user.nama
             updatedField["nama"] = dbUser.nama
@@ -149,6 +160,18 @@ def update_user(user: UserUpdate, db: Session = Depends(getDB), currentUser = De
             responseData = {"message": "Update Successful", "data": updatedField}
         else:
             responseData = {"message": "No changes made", "data": updatedField}
+            
+        gizi = updateGizi(
+            nik=dbUser.nik,
+            berat_badan=dbUser.berat_badan,
+            tinggi_badan=dbUser.tinggi_badan,
+            usia=dbUser.usia,
+            periode_kehamilan=dbUser.periode_kehamilan,
+            pal=dbUser.pal,
+            db=db
+        )
+
+        print(gizi)
 
         return responseData
 

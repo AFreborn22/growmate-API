@@ -1,6 +1,5 @@
 from sqlalchemy import Column, Integer, String, Float, ForeignKey
 from sqlalchemy.orm import relationship
-from .user import User
 from .base import Base
 
 class Gizi(Base):
@@ -12,5 +11,5 @@ class Gizi(Base):
     status_bmi = Column(String)
     kalori_harian = Column(Integer)
 
-    user = relationship(User, back_populates="gizi")
+user = relationship("User", back_populates="gizi")
 
