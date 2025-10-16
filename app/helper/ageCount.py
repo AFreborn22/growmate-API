@@ -8,4 +8,3 @@ def ageCount(tanggal_lahir:date) -> int:
                                              and today.day < tanggal_lahir.day) :
         age-=1
     return age
-
