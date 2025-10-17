@@ -6,7 +6,9 @@ from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
-from app.models.user import Base  
+from app.models.base import Base 
+import app.models.user
+import app.models.gizi
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'app')))
 # this is the Alembic Config object, which provides

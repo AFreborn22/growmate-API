@@ -1,21 +1,37 @@
-from sqlalchemy import Column, Float, Integer, String
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Column, Integer, String, Float, Date, Enum, CheckConstraint
+from sqlalchemy.orm import relationship
+from .base import Base
+from enum import Enum as pyEnum
 
-Base = declarative_base()
+class statusEnum(pyEnum) :
+    trisemester1 = "trisemester1"
+    trisemester2 = "trisemester2"
+    trisemester3 = "trisemester3"
+    postsemester = "postsemester"
 
+class PAL(pyEnum):
+    sedentary = "sedentary"         
+    lightly_active = "lightly_active"   
+    moderately_active = "moderately_active" 
+    very_active = "very_active"      
+    super_active = "super_active" 
 
 class User(Base):
     __tablename__ = "users"
-
-    id = Column(Integer, primary_key=True, index=True)
-    nik = Column(String, unique=True, index=True)
+    
+    nik = Column(String, primary_key=True, index=True)
     nama = Column(String, unique=True, index=True)
     usia = Column(Integer)
     tempat_lahir = Column(String)
-    tanggal_lahir = Column(String)
+    tanggal_lahir = Column(Date)
+    tanggal_kehamilan_pertama = Column(Date)
+    pal = Column(Enum(PAL))
     alamat = Column(String)
     email = Column(String)
     berat_badan = Column(Float)
     tinggi_badan = Column(Float)
-    lingkar_tangan = Column(Float)
+    lingkar_lengan_atas = Column(Float)
+    periode_kehamilan = Column(Enum(statusEnum))
     password = Column(String)
+
+gizi = relationship("Gizi", back_populates="user", uselist=False)
