@@ -82,7 +82,7 @@ def signup(user: UserSignUp, db: Session = Depends(getDB)):
         raise HTTPException(status_code=400, detail="Data integrity error")
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"An error occurred while processing your request: {str(e)}")  # noqa
+        raise HTTPException(status_code=500, detail=f"An error occurred while processing your request: {str(e)}")  
 
 
 # Endpoint untuk login
@@ -163,7 +163,7 @@ def update_user(user: UserUpdate, db: Session = Depends(getDB), currentUser = De
             updated = True
 
         pal = formatPal(user.pal)
-        print(pal)
+        dbUser.pal = pal
 
         if updated:
             db.commit()

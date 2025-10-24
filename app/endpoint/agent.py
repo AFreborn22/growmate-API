@@ -7,7 +7,8 @@ from sqlalchemy.orm import Session
 from app.db.session import getDB
 from app.models.user import User
 from app.core.security import getCurrentUser, getRawToken
-from app.schemas.agent import ChatRequest
+from app.schemas.agent import ChatRequest, ChatResponse
+from app.resExample.agent import chat
 
 router = APIRouter()
 load_dotenv() 
@@ -30,7 +31,7 @@ async def getAgent(query: str, nik: str, token: str):
     except httpx.RequestError as e:
         raise HTTPException(status_code=500, detail=f"Request failed to RAG agent {str(e)}")
 
-@router.post("/chat")
+@router.post("/chat", response_model=ChatResponse, responses = chat)
 async def chatAgent(query: ChatRequest, db: Session = Depends(getDB), currentUser = Depends(getCurrentUser), token:str =  Depends(getRawToken)):
     try:
         dbUser = db.query(User).filter(User.nik == currentUser.nik).first()  
