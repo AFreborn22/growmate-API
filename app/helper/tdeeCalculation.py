@@ -118,3 +118,40 @@ def updateGizi(nik: str, berat_badan: float, tinggi_badan: float, usia: int, pal
             "kalori_harian": kalori_harian
         }
     }
+
+def rekomendasiGizi(berat_badan, tinggi_badan, usia, pal, periode_kehamilan, status_gizi, alergi=None, mode="AKG"):
+    # Hitung kalori harian
+    kalori_harian = kaloriHarian(berat_badan, tinggi_badan, usia, pal, periode_kehamilan, mode)
+
+    # Rekomendasi Mikronutrien berdasarkan status gizi dan trimester
+    if periode_kehamilan == "trisemester1":
+        rekomendasi_karbohidrat = 45
+        rekomendasi_protein = 50
+        rekomendasi_lemak = 35
+        rekomendasi_zat_besi = 27  # Zat besi untuk trimester pertama
+        rekomendasi_kalsium = 1000
+    elif periode_kehamilan == "trisemester2" or periode_kehamilan == "trisemester3":
+        rekomendasi_karbohidrat = 50
+        rekomendasi_protein = 70
+        rekomendasi_lemak = 35
+        rekomendasi_zat_besi = 30  # Zat besi lebih tinggi untuk trimester kedua dan ketiga
+        rekomendasi_kalsium = 1200
+
+    # Sesuaikan dengan status gizi jika diperlukan
+    if status_gizi == "Kekurangan Berat Badan":
+        rekomendasi_karbohidrat += 10
+        rekomendasi_protein += 10
+
+    if alergi:
+        # Menghindari makanan tertentu berdasarkan alergi
+        # Implementasikan pengecekan alergi di sini
+        pass
+
+    return {
+        "kalori_harian": kalori_harian,
+        "rekomendasi_karbohidrat": rekomendasi_karbohidrat,
+        "rekomendasi_protein": rekomendasi_protein,
+        "rekomendasi_lemak": rekomendasi_lemak,
+        "rekomendasi_zat_besi": rekomendasi_zat_besi,
+        "rekomendasi_kalsium": rekomendasi_kalsium
+    }

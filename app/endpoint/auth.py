@@ -9,6 +9,7 @@ from app.core.security import createAccessToken, verifyPassword, hashPassword, g
 from app.helper.ageCount import ageCount
 from app.helper.pregnantCount import trisemesterCount
 from app.helper.tdeeCalculation import updateGizi
+from app.helper.enumHandler import formatPal
 
 router = APIRouter()
 
@@ -29,6 +30,8 @@ def signup(user: UserSignUp, db: Session = Depends(getDB)):
         
         usia = ageCount(user.tanggal_lahir)
         periode_kehamilan = trisemesterCount(user.tanggal_kehamilan_pertama)
+        pal = formatPal(user.pal)
+        print(pal)
         
         # data user untuk disimpan ke database
         userData = {
@@ -37,7 +40,7 @@ def signup(user: UserSignUp, db: Session = Depends(getDB)):
             "tempat_lahir": user.tempat_lahir,
             "tanggal_lahir": user.tanggal_lahir,
             "tanggal_kehamilan_pertama": user.tanggal_kehamilan_pertama,
-            "pal": user.pal,
+            "pal": pal,
             "usia": usia,
             "periode_kehamilan": periode_kehamilan,
             "alamat": user.alamat,
@@ -53,15 +56,16 @@ def signup(user: UserSignUp, db: Session = Depends(getDB)):
         db.commit()
         db.refresh(dbUser)
 
-        gizi = updateGizi(nik=userData["nik"], 
+        updateGizi(
+            nik=userData["nik"], 
             berat_badan=userData["berat_badan"], 
             tinggi_badan=userData["tinggi_badan"], 
             usia=userData["usia"], 
             pal=userData["pal"], 
             periode_kehamilan=userData["periode_kehamilan"], 
-            db=db)
+            db=db
+        )
         
-        print(gizi)
 
         responseData = {
             "message": "User successfully registered",
@@ -161,7 +165,7 @@ def update_user(user: UserUpdate, db: Session = Depends(getDB), currentUser = De
         else:
             responseData = {"message": "No changes made", "data": updatedField}
             
-        gizi = updateGizi(
+        updateGizi(
             nik=dbUser.nik,
             berat_badan=dbUser.berat_badan,
             tinggi_badan=dbUser.tinggi_badan,
@@ -170,8 +174,6 @@ def update_user(user: UserUpdate, db: Session = Depends(getDB), currentUser = De
             pal=dbUser.pal,
             db=db
         )
-
-        print(gizi)
 
         return responseData
 

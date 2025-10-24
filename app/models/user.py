@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Date, Enum, CheckConstraint
+from sqlalchemy import Column, Integer, String, Float, Date, Enum
 from sqlalchemy.orm import relationship
 from .base import Base
 from enum import Enum as pyEnum

@@ -22,7 +22,7 @@ class UserSignUp(BaseModel):
     tempat_lahir: str
     tanggal_lahir: date
     tanggal_kehamilan_pertama: date
-    pal: PAL = Field(default="sedentary")
+    pal: str
     alamat: str
     email: EmailStr  
     berat_badan: float
@@ -88,7 +88,7 @@ class UserUpdate(BaseModel):
     tempat_lahir: Optional[str] | None = None
     tanggal_lahir: Optional[date] | None = None
     tanggal_kehamilan_pertama: Optional[date] | None = None
-    pal: Optional[PAL] | None = None
+    pal: Optional[str] | None = None
     alamat: Optional[str] | None = None
     email: Optional[EmailStr] | None = None  
     berat_badan: Optional[float] | None = None
