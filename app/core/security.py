@@ -1,4 +1,9 @@
 from datetime import datetime, timedelta
+
+# from fastapi.security import OAuth2PasswordBearer
+from datetime import datetime, timedelta
+from fastapi import Depends, HTTPException, Security, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from app.core.config import settings
@@ -11,13 +16,14 @@ from app.db.session import getDB
 # Pengaturan hashing password
 pwdContext = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+
 # Membuat hash password
 def hashPassword(password: str) -> str:
 
     password = password.encode('utf-8')
-    print(f"Password length: {len(password)} bytes")  
+    print(f"Password length: {len(password)} bytes")
     if len(password) > 72:
-        password = password[:72]  
+        password = password[:72]
     return pwdContext.hash(password)
 
 
@@ -25,16 +31,21 @@ def hashPassword(password: str) -> str:
 def verifyPassword(plainPassword: str, hashedPassword: str) -> bool:
     return pwdContext.verify(plainPassword, hashedPassword)
 
+
 # Membuat token akses
 def createAccessToken(data: dict) -> str:
     toEncode = data.copy()
     expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     toEncode.update({"exp": expire})
-    encodedJWT = jwt.encode(toEncode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    encodedJWT = jwt.encode(
+        toEncode, settings.SECRET_KEY,
+        algorithm=settings.ALGORITHM
+    )
     return encodedJWT
 
+
 # Memverifikasi token JWT
-def verifyToken(token: str):
+def verifyToken(token: str) -> dict:
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         return payload

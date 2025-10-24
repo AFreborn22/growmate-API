@@ -24,7 +24,7 @@ class UserSignUp(BaseModel):
     tanggal_kehamilan_pertama: date
     pal: str
     alamat: str
-    email: EmailStr  
+    email: EmailStr
     berat_badan: float
     tinggi_badan: float
     lingkar_lengan_atas: float
@@ -54,6 +54,7 @@ class UserSignUpResponse(BaseModel):
 
     class Config:
         orm_mode = True
+
 
 class UserLogin(BaseModel):
     email: str

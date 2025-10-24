@@ -13,6 +13,7 @@ from app.helper.enumHandler import formatPal
 
 router = APIRouter()
 
+
 # Endpoint untuk sign-up
 @router.post("/signup", response_model=UserSignUpResponse, responses=signup)
 def signup(user: UserSignUp, db: Session = Depends(getDB)):
@@ -20,11 +21,13 @@ def signup(user: UserSignUp, db: Session = Depends(getDB)):
 
         # Cek apakah NIK atau email sudah ada di DB
         existing_user_nik = db.query(User).filter(User.nik == user.nik).first()
-        existing_user_email = db.query(User).filter(User.email == user.email).first()
+        existing_user_email = db.query(User).filter(
+            User.email == user.email).first()
 
         if existing_user_nik:
-            raise HTTPException(status_code=400, detail="NIK already registered")
-        
+            raise HTTPException(
+                status_code=400, detail="NIK already registered")
+
         if existing_user_email:
             raise HTTPException(status_code=400, detail="Email already registered")
         
@@ -79,7 +82,8 @@ def signup(user: UserSignUp, db: Session = Depends(getDB)):
         raise HTTPException(status_code=400, detail="Data integrity error")
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"An error occurred while processing your request: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"An error occurred while processing your request: {str(e)}")  # noqa
+
 
 # Endpoint untuk login
 @router.post("/login", response_model=Token, responses=login)
@@ -157,6 +161,9 @@ def update_user(user: UserUpdate, db: Session = Depends(getDB), currentUser = De
             dbUser.lingkar_lengan_atas = user.lingkar_lengan_atas
             updatedField["lingkar_lengan_atas"] = dbUser.lingkar_lengan_atas
             updated = True
+
+        pal = formatPal(user.pal)
+        print(pal)
 
         if updated:
             db.commit()
