@@ -49,7 +49,7 @@ def kaloriHarian(berat_badan, tinggi_badan, usia, pal, periode_kehamilan, mode="
         if periode_kehamilan == "trisemester1" :
             kalori_harian = tdee + 180
         elif periode_kehamilan == "trisemester2" or periode_kehamilan =="trisemester3" :
-            kalori_harian = tdee + 300
+            kalori_harian = tdee + 300 
 
     else :
         if periode_kehamilan == "trisemester2" :

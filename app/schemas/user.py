@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr
 from typing import Optional
 from datetime import date
 from enum import Enum
@@ -85,16 +85,16 @@ class UserData(BaseModel):
     }
 
 class UserUpdate(BaseModel):
-    nama: Optional[str] | None = None
-    tempat_lahir: Optional[str] | None = None
-    tanggal_lahir: Optional[date] | None = None
-    tanggal_kehamilan_pertama: Optional[date] | None = None
-    pal: Optional[str] | None = None
-    alamat: Optional[str] | None = None
-    email: Optional[EmailStr] | None = None  
-    berat_badan: Optional[float] | None = None
-    tinggi_badan: Optional[float] | None = None
-    lingkar_lengan_atas: Optional[float] | None = None
+    nama: Optional[str] = None
+    tempat_lahir: Optional[str] = None
+    tanggal_lahir: Optional[date] = None
+    tanggal_kehamilan_pertama: Optional[date] = None
+    pal: Optional[str] = None
+    alamat: Optional[str] = None
+    email: Optional[EmailStr] = None  
+    berat_badan: Optional[float] = None
+    tinggi_badan: Optional[float] = None
+    lingkar_lengan_atas: Optional[float] = None
 
 class UserUpdateResponse(BaseModel):
     message: str = "User Succesfully Updated"

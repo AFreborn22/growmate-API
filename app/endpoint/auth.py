@@ -141,8 +141,8 @@ def update_user(user: UserUpdate, db: Session = Depends(getDB), currentUser = De
             updatedField["tanggal_kehamilan_pertama"] = dbUser.tanggal_kehamilan_pertama
             updatedField["periode_kehamilan"] = dbUser.periode_kehamilan
             updated = True
-        if user.pal and user.pal != dbUser.pal:
-            dbUser.pal = user.pal
+        if user.pal is not None and user.pal != dbUser.pal:
+            dbUser.pal = formatPal(user.pal) 
             updatedField["pal"] = dbUser.pal
             updated = True
         if user.alamat and user.alamat != dbUser.alamat:
@@ -161,9 +161,6 @@ def update_user(user: UserUpdate, db: Session = Depends(getDB), currentUser = De
             dbUser.lingkar_lengan_atas = user.lingkar_lengan_atas
             updatedField["lingkar_lengan_atas"] = dbUser.lingkar_lengan_atas
             updated = True
-
-        pal = formatPal(user.pal)
-        dbUser.pal = pal
 
         if updated:
             db.commit()
