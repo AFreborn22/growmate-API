@@ -3,6 +3,7 @@ import logging
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from app.endpoint import auth
+from app.endpoint import agent
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("myapp")
@@ -23,9 +24,6 @@ async def logRequests(request: Request, call_next):
     logger.info(f"Response status: {response.status_code}")
     return response
 
-schema = app.openapi()
-schema.setdefault("security", [{"HTTPBearer": []}])
-app.openapi_schema = schema
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -35,3 +33,8 @@ app.add_middleware(
 )
 
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
+app.include_router(agent.router, prefix="/api/agent", tags=["chat"])
+
+schema = app.openapi()
+schema.setdefault("security", [{"HTTPBearer": []}])
+app.openapi_schema = schema 

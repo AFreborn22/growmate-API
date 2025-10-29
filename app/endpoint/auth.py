@@ -1,23 +1,25 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
-
-from app.core.forms import OAuth2PasswordRequestFormCompat
-from app.core.security import (createAccessToken, getCurrentUser, hashPassword,
-                               verifyPassword)
+from app.schemas.user import UserSignUp, UserSignUpResponse, UserLogin, Token, UserData, UserUpdate, UserUpdateResponse
+from app.resExample.auth import signup, login, getData, updateData
 from app.db.session import getDB
 from app.models.user import User
 from app.core.security import createAccessToken, verifyPassword, hashPassword, getCurrentUser
+from app.helper.ageCount import ageCount
+from app.helper.pregnantCount import trisemesterCount
+from app.helper.tdeeCalculation import updateGizi
+from app.helper.enumHandler import formatPal
 
 router = APIRouter()
 
 
 # Endpoint untuk sign-up
-@router.post("/signup")
-def signup(user: UserCreate, db: Session = Depends(getDB)):
+@router.post("/signup", response_model=UserSignUpResponse, responses=signup)
+def signup(user: UserSignUp, db: Session = Depends(getDB)):
     try:
-        # Cek apakah NIK atau email sudah ada di database
+
+        # Cek apakah NIK atau email sudah ada di DB
         existing_user_nik = db.query(User).filter(User.nik == user.nik).first()
         existing_user_email = db.query(User).filter(
             User.email == user.email).first()
@@ -27,35 +29,50 @@ def signup(user: UserCreate, db: Session = Depends(getDB)):
                 status_code=400, detail="NIK already registered")
 
         if existing_user_email:
-            raise HTTPException(
-                status_code=400, detail="Email already registered")
-
-        # Membuat data user untuk disimpan ke database
-        user_data = {
+            raise HTTPException(status_code=400, detail="Email already registered")
+        
+        usia = ageCount(user.tanggal_lahir)
+        periode_kehamilan = trisemesterCount(user.tanggal_kehamilan_pertama)
+        pal = formatPal(user.pal)
+        print(pal)
+        
+        # data user untuk disimpan ke database
+        userData = {
             "nik": user.nik,
             "nama": user.nama,
-            "usia": user.usia,
             "tempat_lahir": user.tempat_lahir,
             "tanggal_lahir": user.tanggal_lahir,
+            "tanggal_kehamilan_pertama": user.tanggal_kehamilan_pertama,
+            "pal": pal,
+            "usia": usia,
+            "periode_kehamilan": periode_kehamilan,
             "alamat": user.alamat,
             "email": user.email,
             "berat_badan": user.berat_badan,
             "tinggi_badan": user.tinggi_badan,
-            "lingkar_tangan": user.lingkar_tangan,
-            # Meng-hash password sebelum disimpan
-            "password": hashPassword(user.password)
+            "lingkar_lengan_atas": user.lingkar_lengan_atas,
+            "password": hashPassword(user.password)  
         }
 
-        # Menyimpan user ke database
-        db_user = User(**user_data)
-        db.add(db_user)
+        dbUser = User(**userData)
+        db.add(dbUser)
         db.commit()
-        db.refresh(db_user)
+        db.refresh(dbUser)
 
-        # Menyusun response yang berisi data user yang baru dibuat dan pesan sukses
+        updateGizi(
+            nik=userData["nik"], 
+            berat_badan=userData["berat_badan"], 
+            tinggi_badan=userData["tinggi_badan"], 
+            usia=userData["usia"], 
+            pal=userData["pal"], 
+            periode_kehamilan=userData["periode_kehamilan"], 
+            db=db
+        )
+        
+
         responseData = {
-            "user_data": user_data,
-            "message": "User successfully registered"
+            "message": "User successfully registered",
+            "data": userData
         }
 
         return responseData
@@ -65,52 +82,105 @@ def signup(user: UserCreate, db: Session = Depends(getDB)):
         raise HTTPException(status_code=400, detail="Data integrity error")
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"An error occurred while processing your request: {str(e)}")  # noqa
+        raise HTTPException(status_code=500, detail=f"An error occurred while processing your request: {str(e)}")  
 
 
 # Endpoint untuk login
-@router.post("/login", response_model=Token)
+@router.post("/login", response_model=Token, responses=login)
 def login(user: UserLogin, db: Session = Depends(getDB)):
+
+    # cari user di DB by email & pw
     dbUser = db.query(User).filter(User.email == user.email).first()
     if not dbUser or not verifyPassword(user.password, dbUser.password):
-        raise HTTPException(status_code=400, detail="Incorrect credentials")
+        raise HTTPException(status_code=400, detail="Incorrect Email or Password")
 
     access_token = createAccessToken(data={"sub": dbUser.nik, "email": dbUser.email})
     return {"access_token": access_token, "token_type": "bearer"}
 
+@router.get("/data", response_model=UserData, responses=getData)
+def getData(db: Session = Depends(getDB), currentUser = Depends(getCurrentUser)):
+    try :
+        dbUser = db.query(User).filter(User.nik == currentUser.nik).first()
+        if not dbUser:
+            raise HTTPException(status_code=404, detail="Invalid Credentials")
+
+        return dbUser 
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An error occurred while updating the user: {str(e)}")
+
 
 # Endpoint untuk update user
-@router.put("/update")
-def update_user(user: UserUpdate, db: Session = Depends(getDB), currentUser=Depends(getCurrentUser)):
+@router.put("/update", response_model=UserUpdateResponse, responses=updateData)
+def update_user(user: UserUpdate, db: Session = Depends(getDB), currentUser = Depends(getCurrentUser)):
     try:
-        # Cari user berdasarkan NIK yang terautentikasi
+        # cari user di DB by NIK
         dbUser = db.query(User).filter(User.nik == currentUser.nik).first()
         if not dbUser:
             raise HTTPException(status_code=404, detail="User not found")
-        
-        if user.nama:
+
+        updated = False
+        updatedField = {}
+
+        if user.nama and user.nama != dbUser.nama:
             dbUser.nama = user.nama
-        if user.usia:
-            dbUser.usia = user.usia
-        if user.tempat_lahir:
+            updatedField["nama"] = dbUser.nama
+            updated = True
+        if user.tempat_lahir and user.tempat_lahir != dbUser.tempat_lahir:
             dbUser.tempat_lahir = user.tempat_lahir
-        if user.tanggal_lahir:
+            updatedField["tempat_lahir"] = dbUser.tempat_lahir
+            updated = True
+        if user.tanggal_lahir and user.tanggal_lahir != dbUser.tanggal_lahir:
             dbUser.tanggal_lahir = user.tanggal_lahir
-        if user.alamat:
+            dbUser.usia = ageCount(dbUser.tanggal_lahir)
+            updatedField["tanggal_lahir"] = dbUser.tanggal_lahir
+            updatedField["usia"] = dbUser.usia
+            updated = True
+        if user.tanggal_kehamilan_pertama and user.tanggal_kehamilan_pertama != dbUser.tanggal_kehamilan_pertama:
+            dbUser.tanggal_kehamilan_pertama = user.tanggal_kehamilan_pertama
+            dbUser.periode_kehamilan = trisemesterCount(dbUser.tanggal_kehamilan_pertama)
+            updatedField["tanggal_kehamilan_pertama"] = dbUser.tanggal_kehamilan_pertama
+            updatedField["periode_kehamilan"] = dbUser.periode_kehamilan
+            updated = True
+        if user.pal is not None and user.pal != dbUser.pal:
+            dbUser.pal = formatPal(user.pal) 
+            updatedField["pal"] = dbUser.pal
+            updated = True
+        if user.alamat and user.alamat != dbUser.alamat:
             dbUser.alamat = user.alamat
-        if user.berat_badan:
+            updatedField["alamat"] = dbUser.alamat
+            updated = True
+        if user.berat_badan and user.berat_badan != dbUser.berat_badan:
             dbUser.berat_badan = user.berat_badan
-        if user.tinggi_badan:
+            updatedField["berat_badan"] = dbUser.berat_badan
+            updated = True
+        if user.tinggi_badan and user.tinggi_badan != dbUser.tinggi_badan:
             dbUser.tinggi_badan = user.tinggi_badan
-        if user.lingkar_tangan:
-            dbUser.lingkar_tangan = user.lingkar_tangan
+            updatedField["tinggi_badan"] = dbUser.tinggi_badan
+            updated = True
+        if user.lingkar_lengan_atas and user.lingkar_lengan_atas != dbUser.lingkar_lengan_atas:
+            dbUser.lingkar_lengan_atas = user.lingkar_lengan_atas
+            updatedField["lingkar_lengan_atas"] = dbUser.lingkar_lengan_atas
+            updated = True
 
-        # Commit perubahan ke database
-        db.commit()
-        db.refresh(dbUser)
+        if updated:
+            db.commit()
+            db.refresh(dbUser)
+            responseData = {"message": "Update Successful", "data": updatedField}
+        else:
+            responseData = {"message": "No changes made", "data": updatedField}
+            
+        updateGizi(
+            nik=dbUser.nik,
+            berat_badan=dbUser.berat_badan,
+            tinggi_badan=dbUser.tinggi_badan,
+            usia=dbUser.usia,
+            periode_kehamilan=dbUser.periode_kehamilan,
+            pal=dbUser.pal,
+            db=db
+        )
 
-        return {"user": user,
-                "message": "Update data successfully"}
+        return responseData
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"An error occurred while updating the user: {str(e)}")  # noqa
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"An error occurred while updating the user: {str(e)}")

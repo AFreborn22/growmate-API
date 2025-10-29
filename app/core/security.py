@@ -49,7 +49,7 @@ def verifyToken(token: str) -> dict:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         return payload
     except JWTError:
-        raise HTTPException(status_code=401, detail="Could not validate credentials")
+        raise HTTPException(status_code=401, detail="Unauthorized access. Token may be invalid or missing")
     
 httpBearer = HTTPBearer(auto_error=True)
 
@@ -59,11 +59,14 @@ def getCurrentUser(creds: HTTPAuthorizationCredentials = Depends(httpBearer), db
         payload = verifyToken(token)
         nik: str = payload.get("sub") 
         if not nik:
-            raise HTTPException(status_code=401, detail="Could not validate credentials")
+            raise HTTPException(status_code=401, detail="Unauthorized access. Token may be invalid or missing")
         
         db_user = db.query(User).filter(User.nik == nik).first()
         if db_user is None:
             raise HTTPException(status_code=404, detail="User not found")
         return db_user
     except JWTError:
-        raise HTTPException(status_code=401, detail="Could not validate credentials")
+        raise HTTPException(status_code=401, detail="Unauthorized access. Token may be invalid or missing")
+    
+def getRawToken(creds: HTTPAuthorizationCredentials = Depends(httpBearer)) -> str:
+    return creds.credentials
