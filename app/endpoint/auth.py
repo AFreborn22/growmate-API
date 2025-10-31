@@ -11,30 +11,27 @@ from app.helper.pregnantCount import trisemesterCount
 from app.helper.tdeeCalculation import updateGizi
 from app.helper.enumHandler import formatPal
 
+import asyncio 
+import functools
+
 router = APIRouter()
 
-
-# Endpoint untuk sign-up
-@router.post("/signup", response_model=UserSignUpResponse, responses=signup)
-def signup(user: UserSignUp, db: Session = Depends(getDB)):
+# --- HELPER FUNCTION SIGNUP ---
+def _executeSignup(user: UserSignUp, db: Session):
     try:
-
-        # Cek apakah NIK atau email sudah ada di DB
+        # Cek apakah NIK atau email (cek sudah ada di DB / belum)
         existing_user_nik = db.query(User).filter(User.nik == user.nik).first()
         existing_user_email = db.query(User).filter(
             User.email == user.email).first()
 
         if existing_user_nik:
-            raise HTTPException(
-                status_code=400, detail="NIK already registered")
-
+            raise ValueError("NIK already registered")
         if existing_user_email:
-            raise HTTPException(status_code=400, detail="Email already registered")
+            raise ValueError("Email already registered")
         
         usia = ageCount(user.tanggal_lahir)
         periode_kehamilan = trisemesterCount(user.tanggal_kehamilan_pertama)
         pal = formatPal(user.pal)
-        print(pal)
         
         # data user untuk disimpan ke database
         userData = {
@@ -69,58 +66,98 @@ def signup(user: UserSignUp, db: Session = Depends(getDB)):
             db=db
         )
         
-
         responseData = {
             "message": "User successfully registered",
             "data": userData
         }
-
         return responseData
-
+    
+    except ValueError as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e)) 
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=400, detail="Data integrity error")
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"An error occurred while processing your request: {str(e)}")  
+        raise HTTPException(status_code=500, detail=f"An error occurred while processing your request: {str(e)}") 
 
+# Endpoint untuk sign-up
+@router.post("/signup", response_model=UserSignUpResponse, responses=signup)
+async def signup(user: UserSignUp, db: Session = Depends(getDB)):
+    responseData = await asyncio.to_thread(
+        functools.partial(
+            _executeSignup, 
+            user=user, 
+            db=db
+        )
+    )
+    return responseData
+
+# --- HELPER FUNCTION UNTUK LOGIN ---
+def _executeLogin(user: UserLogin, db: Session) :
+    try :
+        # cari user di DB by email & pw
+        dbUser = db.query(User).filter(User.email == user.email).first()
+
+        if not dbUser or not verifyPassword(user.password, dbUser.password):
+            raise ValueError("Incorrect Email or Password")
+
+        access_token = createAccessToken(data={"sub": dbUser.nik, "email": dbUser.email})
+        return {"access_token": access_token, "token_type": "bearer"}
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 # Endpoint untuk login
 @router.post("/login", response_model=Token, responses=login)
-def login(user: UserLogin, db: Session = Depends(getDB)):
+async def login(user: UserLogin, db: Session = Depends(getDB)):
+    responseData = await asyncio.to_thread(
+        functools.partial(
+            _executeLogin, 
+            user=user, 
+            db=db
+        )
+    )
+    return responseData
 
-    # cari user di DB by email & pw
-    dbUser = db.query(User).filter(User.email == user.email).first()
-    if not dbUser or not verifyPassword(user.password, dbUser.password):
-        raise HTTPException(status_code=400, detail="Incorrect Email or Password")
-
-    access_token = createAccessToken(data={"sub": dbUser.nik, "email": dbUser.email})
-    return {"access_token": access_token, "token_type": "bearer"}
-
-@router.get("/data", response_model=UserData, responses=getData)
-def getData(db: Session = Depends(getDB), currentUser = Depends(getCurrentUser)):
+# --- HELPER FUNCTION GET DATA ---
+def _executeGetData(db: Session, currentUser) : 
     try :
         dbUser = db.query(User).filter(User.nik == currentUser.nik).first()
         if not dbUser:
-            raise HTTPException(status_code=404, detail="Invalid Credentials")
+            raise ValueError("Invalid Credentials")
 
-        return dbUser 
+        return {"data": dbUser} 
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"An error occurred while updating the user: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
 
+# Endpoint untuk get data
+@router.get("/data", response_model=UserData, responses=getData)
+async def getData(db: Session = Depends(getDB), currentUser = Depends(getCurrentUser)):
+    responseData = await asyncio.to_thread(
+        functools.partial(
+            _executeGetData, 
+            db=db, 
+            currentUser=currentUser 
+        )
+    )
+    return responseData
 
-# Endpoint untuk update user
-@router.put("/update", response_model=UserUpdateResponse, responses=updateData)
-def update_user(user: UserUpdate, db: Session = Depends(getDB), currentUser = Depends(getCurrentUser)):
+# --- HELPER FUNCTION UPDATE USER ---
+def _executeUpdate(user: UserUpdate, db: Session, currentUser) : 
     try:
         # cari user di DB by NIK
         dbUser = db.query(User).filter(User.nik == currentUser.nik).first()
         if not dbUser:
-            raise HTTPException(status_code=404, detail="User not found")
+            raise ValueError("User not found")
 
         updated = False
         updatedField = {}
 
+        # Logika Update
         if user.nama and user.nama != dbUser.nama:
             dbUser.nama = user.nama
             updatedField["nama"] = dbUser.nama
@@ -180,7 +217,23 @@ def update_user(user: UserUpdate, db: Session = Depends(getDB), currentUser = De
         )
 
         return responseData
-
+    
+    except ValueError as e:
+        db.rollback()
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"An error occurred while updating the user: {str(e)}")
+
+# Endpoint untuk update user
+@router.put("/update", response_model=UserUpdateResponse, responses=updateData)
+async def update_user(user: UserUpdate, db: Session = Depends(getDB), currentUser = Depends(getCurrentUser)):
+    responseData = await asyncio.to_thread(
+        functools.partial(
+            _executeUpdate, 
+            user=user, 
+            db=db, 
+            currentUser=currentUser 
+        )
+    )
+    return responseData

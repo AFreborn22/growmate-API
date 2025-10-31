@@ -1,4 +1,5 @@
 import logging
+import time
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,6 +17,17 @@ app = FastAPI(
         "docExpansion": "none",
     },
 )
+
+@app.middleware("http")
+async def logRequests(request: Request, call_next):
+    start_time = time.time()
+    logger.info(f"Request: {request.method} {request.url}")
+    
+    response = await call_next(request)
+    
+    process_time = time.time() - start_time 
+    logger.info(f"Response status: {response.status_code} | Total Proxy Time: {process_time:.4f}s")
+    return response
 
 @app.middleware("http")
 async def logRequests(request: Request, call_next):

@@ -35,22 +35,7 @@ class UserSignUp(BaseModel):
 
 class UserSignUpResponse(BaseModel):
     message: str  = "User successfully registered"
-    data : dict = {
-        "nik": "123456789",
-        "nama": "Elizabeth Huang",
-        "tempat_lahir": "Jakarta",
-        "tanggal_lahir": "1990-05-15",
-        "tanggal_kehamilan_pertama": "2025-06-01",
-        "pal": "lightly_active",
-        "usia": 35,
-        "periode_kehamilan": "trisemester2",
-        "alamat": "Jl. Merdeka No.1, Jakarta",
-        "email": "elizabeth@example.com",
-        "berat_badan": 70.5,
-        "tinggi_badan": 170,
-        "lingkar_lengan_atas": 25.5,
-        "password": "$2b$12$bt06VmHJzC1dwjJEwSGWUeUs/HjDkp10Zv4fAtTe3.mcI.RZHYQ0m"
-    }
+    data : dict
 
     class Config:
         orm_mode = True
@@ -67,22 +52,29 @@ class Token(BaseModel):
     access_token: str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkiLCJlbWFpbCI6ImVsaXphYmV0aEBleGFtcGxlLmNvbSIsImV4cCI6MTc2MDYyNjA3OX0.bk9ESkU9fb-p--eFLHAZWX79bheDOScTp-stCRs1buY"
     token_type: str = "bearer"
         
+class UserSchema(BaseModel):
+    nik: str
+    nama: str
+    tempat_lahir: str
+    tanggal_lahir: date
+    tanggal_kehamilan_pertama: date
+    pal: str
+    usia: int 
+    periode_kehamilan: str 
+    alamat: str
+    email: EmailStr
+    berat_badan: float
+    tinggi_badan: float
+    lingkar_lengan_atas: float
+    
+    class Config:
+        orm_mode = True 
+
 class UserData(BaseModel):
-    data : dict = {
-        "nik": "123456789",
-        "nama": "Elizabeth Huang",
-        "tempat_lahir": "Jakarta",
-        "tanggal_lahir": "1990-05-15",
-        "tanggal_kehamilan_pertama": "2025-06-01",
-        "pal": "lightly_active",
-        "usia": 35,
-        "periode_kehamilan": "trisemester2",
-        "alamat": "Jl. Merdeka No.1, Jakarta",
-        "email": "elizabeth@example.com",
-        "berat_badan": 70.5,
-        "tinggi_badan": 170,
-        "lingkar_lengan_atas": 25.5
-    }
+    data : UserSchema 
+
+    class Config: 
+        orm_mode = True
 
 class UserUpdate(BaseModel):
     nama: Optional[str] = None
@@ -97,21 +89,8 @@ class UserUpdate(BaseModel):
     lingkar_lengan_atas: Optional[float] = None
 
 class UserUpdateResponse(BaseModel):
-    message: str = "User Succesfully Updated"
-    data : dict = {
-        "nama": "Elizabeth Huang",
-        "tempat_lahir": "Jakarta",
-        "tanggal_lahir": "1990-05-15",
-        "tanggal_kehamilan_pertama": "2025-06-01",
-        "pal": "lightly_active",
-        "usia": 35,
-        "periode_kehamilan": "trisemester2",
-        "alamat": "Jl. Merdeka No.1, Jakarta",
-        "email": "elizabeth@example.com",
-        "berat_badan": 70.5,
-        "tinggi_badan": 170,
-        "lingkar_lengan_atas": 25.5
-    }
+    message: str 
+    data : dict
 
     class Config:
         orm_mode = True
